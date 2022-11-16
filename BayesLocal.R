@@ -11,6 +11,7 @@ CalibDS3 <- CalibDS2
 CalibDS3$NodeId <- as.numeric(CalibDS3$fNodeId)
 CalibDS3$TagId <- as.numeric(CalibDS3$fTagId)
 sample <- CalibDS[1:2,]
+
 #######model without known distance/calibration data##########
 model <- nimbleCode({
   #process model
@@ -173,7 +174,9 @@ localmodel <- nimbleModel(code=model, name="localmodel", constants=Sampleconst, 
 localmodel$plotGraph()
 
 ####################################################################################################################
+###############more complicated model-unknown distance######################################
 ####################################################################################################################
+#model incorporating effects of nodes on a,s and K, and effect of tags on a
 model3 <- nimbleCode({
   #process model
   for (i in 1:n) {
@@ -188,17 +191,18 @@ model3 <- nimbleCode({
   S[i] ~ dnorm(.009949, .02372)# this might not be a normal, maybe beta
  }
   for (i in 1:n) {
-    distance[i] ~ dgamma (2.41, .005) #see scrap
+    distance[i] ~ dgamma (2.41, .005) #see scrap, should this be lognormal?
   }
-  #prior for random effect of tag on intercept
+  #prior for random effect of tag on intercept, not sure this should be incorporate in this way
   for (i in 1:tags) {
     RE[i] ~ dnorm(0, 100)
   }
   vari ~ dinvgamma(1.72, 1.87957)#see scrap
   
+  distance ~ dlognorm(equation I need to figure out here)#is this in the right place
   #RSSI? Its known but predicting locations from data we used to build model seems fishy
   
-  #derived quantity-location?
+
 })
 model3
 
@@ -249,6 +253,9 @@ sample.data <- list(avgRSS=sample$avgRSS, distance=sample$distance)
 
 
 ###########################################################
+#########more complicated model but with distance known####
+###########################################################
+#model incorporating effects of nodes on a,s and K, and effect of tags on a
 model4 <- nimbleCode({
   #process model
   for (i in 1:n) {
@@ -307,32 +314,6 @@ Ks <- cbind(K, K2)
 as <- cbind(a, a2)
 Ss <- cbind(S, S2)
 ############################################################################################
-model3 <- nimbleCode({
-  #process model
-  for (i in 1:n) {
-    avgRSS[i] ~ dnorm((RE[TagId[i]] + a[NodeId[i]]) * exp(-S[NodeId[i]] * distance[i]) + K[NodeId[i]], vari)
-  }
-  #priors for effect of nodes on a,s,and K
-  for (i in 1:nodes) {
-    a[i] ~ dnorm(32.57, 69.421)
-    
-    K[i] ~ dnorm(-103.86, 8.567)
-    
-    S[i] ~ dnorm(.009949, .02372)# this might not be a normal, maybe beta
-  }
-  for (i in 1:n) {
-    distance[i] ~ dgamma (2.41, .005) #see scrap
-  }
-  #prior for random effect of tag on intercept
-  for (i in 1:tags) {
-    RE[i] ~ dnorm(0, 100)
-  }
-  vari ~ dinvgamma(1.72, 1.87957)#see scrap
-  
-  #RSSI? Its known but predicting locations from data we used to build model seems fishy
-  
-  #derived quantity-location?
-})
 ################scrap########################
 hist(CalibDS$distance)
 logdist <- log(CalibDS$distance)
